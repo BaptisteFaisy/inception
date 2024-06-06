@@ -1,60 +1,66 @@
-version: "3.5"
-
-networks:
-  app-network:
-    name: app-network
-    driver: bridge
-
-volumes:
-  wp:
-    driver: local
-    name: wp
-    driver_opts:
-      type: none
-      o: bind
-      device: /home/bfaisy/data/wordpress
-  db:
-    driver: local
-    name: db
-    driver_opts:
-      type: none
-      o: bind
-      device: /home/bfaisy/data/mariadb
-
+version: '3.8'
 services:
+
   mariadb:
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     container_name: mariadb
-    build: ./requirements/mariadb
-    env_file:
-      - .env
+    build: requirements/mariadb
+    image: mariadb:v_final
     volumes:
-      - db:/var/lib/mysql
+      - db_data:/var/lib/mysql
     networks:
-      - app-network
-    restart: unless-stopped
+      - docker_network
+    restart: always
 
   wordpress:
+    environment: 
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_HOSTNAME=${MYSQL_HOSTNAME}
     container_name: wordpress
-    build: ./requirements/wordpress
-    env_file:
-      - .env
-    depends_on:
+    build: requirements/wordpress
+    image: wordpress:v_final
+    depends_on: 
       - mariadb
-    volumes:
-      - wp:/var/www/html
     networks:
-      - app-network
-    restart: unless-stopped
+      - docker_network
+    volumes:
+      - wordpress_data:/var/www/html/wordpress
+    restart: always
 
   nginx:
     container_name: nginx
-    build: ./requirements/nginx
+    build: requirements/nginx
+    image: nginx:v_final
+    depends_on :
+      - wordpress
+    networks:
+      - docker_network
     ports:
       - "443:443"
-    depends_on:
-      - wordpress
     volumes:
-      - wp:/var/www/html
-    networks:
-      - app-network
-    restart: unless-stopped
+      - wordpress_data:/var/www/html/wordpress
+    restart: always
+
+networks:
+  docker_network:
+
+volumes:
+  db_data: 
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/bfaisy/data/mysql
+      o: bind
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/bfaisy/data/wordpress
+      o: bind
+

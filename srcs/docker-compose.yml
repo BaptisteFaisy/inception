@@ -9,7 +9,6 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     container_name: mariadb
     build: requirements/mariadb
-    image: mariadb:v_final
     volumes:
       - db_data:/var/lib/mysql
     networks:
@@ -24,7 +23,6 @@ services:
       - MYSQL_HOSTNAME=${MYSQL_HOSTNAME}
     container_name: wordpress
     build: requirements/wordpress
-    image: wordpress:v_final
     depends_on: 
       - mariadb
     networks:
@@ -36,7 +34,6 @@ services:
   nginx:
     container_name: nginx
     build: requirements/nginx
-    image: nginx:v_final
     depends_on :
       - wordpress
     networks:
@@ -46,6 +43,8 @@ services:
     volumes:
       - wordpress_data:/var/www/html/wordpress
     restart: always
+    extra_hosts:
+      - "bfaisy.42.fr:127.0.0.1"
 
 networks:
   docker_network:

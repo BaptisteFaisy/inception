@@ -1,29 +1,10 @@
-FROM debian:buster
-
-
-RUN apt-get update && apt-get -y install \
-wget \
-php \
-php-cgi \
-php-mysql \
-php-fpm \
-php-pdo \
-php-gd php-cli \
-php-mbstring \
-&& rm -rf /var/lib/apt/lists/*
-
-
-COPY ./conf/www.conf /var/www/html/
-
-
-RUN mkdir /run/php
-
-
-COPY ./tools/create_wordpress.sh /usr/local/bin/
-ENTRYPOINT ["create_wordpress.sh"]
-
-WORKDIR /var/www/html/
-
-EXPOSE 9000
-
-CMD ["/usr/sbin/php-fpm7.3", "-F"]
+FROM debian:bullseye
+RUN apt update && apt upgrade -y && apt install -y \
+php7.4-fpm \
+php7.4-mysqli \
+curl 
+RUN mkdir -p /run/php && chown -R www-data:www-data /run/php
+COPY conf/www.conf /etc/php/7.4/fpm/pool.d/.
+COPY ./tools/wp-install.sh .
+RUN chmod +x ./wp-install.sh
+ENTRYPOINT ["sh", "./wp-install.sh"]

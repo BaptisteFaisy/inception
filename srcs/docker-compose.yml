@@ -1,65 +1,71 @@
-version: '3.8'
+version: "3.8"
+
 services:
-
-  mariadb:
-    environment:
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-    container_name: mariadb
-    build: requirements/mariadb
-    volumes:
-      - db_data:/var/lib/mysql
-    networks:
-      - docker_network
-    restart: always
-
-  wordpress:
-    environment: 
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_HOSTNAME=${MYSQL_HOSTNAME}
-    container_name: wordpress
-    build: requirements/wordpress
-    depends_on: 
-      - mariadb
-    networks:
-      - docker_network
-    volumes:
-      - wordpress_data:/var/www/html/wordpress
-    restart: always
-
   nginx:
+    image: nginx:v1.0
+    build: 
+      context: requirements/nginx/.
+      args:
+        - CRED_PATH
+        - CRED_CERT
+        - CRED_KEY
+        - COUNTRY
+        - STATE
+        - LOCALITY
+        - ORGANIZATION
+        - ORG_UNIT
+        - COMMON_NAME
     container_name: nginx
-    build: requirements/nginx
-    depends_on :
+    restart: on-failure
+    depends_on:
       - wordpress
     networks:
-      - docker_network
+      - inception
     ports:
       - "443:443"
     volumes:
-      - wordpress_data:/var/www/html/wordpress
-    restart: always
-    extra_hosts:
-      - "bfaisy.42.fr:127.0.0.1"
-
-networks:
-  docker_network:
-
+      - v_web:/var/www/html
+  wordpress:
+    image: wordpress:v1.0
+    build: requirements/wordpress/.
+    container_name: wordpress
+    restart: on-failure
+    depends_on:
+      - mariadb
+    networks:
+      - inception
+    expose:
+      - "9000"
+    volumes:
+      - v_web:/var/www/html
+    env_file:
+      - .env
+  mariadb:
+    image: mariadb:v1.0
+    build: requirements/mariadb/.
+    container_name: mariadb
+    restart: on-failure
+    networks:
+      - inception
+    expose:
+      - "3306"
+    volumes:
+      - v_db:/var/lib/mysql
+    env_file:
+      - .env
 volumes:
-  db_data: 
+  v_web:
     driver: local
     driver_opts:
       type: none
-      device: /home/bfaisy/data/mysql
       o: bind
-  wordpress_data:
+      device: ../home/bfaisy/data/wordpress
+  v_db:
     driver: local
     driver_opts:
       type: none
-      device: /home/bfaisy/data/wordpress
       o: bind
-
+      device: ../home/bfaisy/data/mariadb
+networks:
+  inception:
+    driver: bridge

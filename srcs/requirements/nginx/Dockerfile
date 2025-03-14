@@ -1,13 +1,11 @@
-FROM debian:buster
-
-RUN apt-get update && apt-get -y install nginx \
-openssl \
-&& rm -rf /var/lib/apt/lists/*
-
-RUN openssl req -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out /etc/ssl/bfaisy.42.fr.pem -keyout /etc/ssl/bfaisy.42.fr.key -subj "/C=FR/ST=Paris/L=Paris/O=42 School/OU=bfaisy/CN=bfaisy.42.fr"
-
-COPY conf/nginx.conf /etc/nginx/conf.d
-
-EXPOSE 443
-
-CMD ["nginx", "-g", "daemon off;"]
+FROM debian:bullseye
+ARG CRED_PATH CRED_CERT CRED_KEY COUNTRY STATE LOCALITY ORGANIZATION ORG_UNIT COMMON_NAME
+RUN apt update && apt upgrade -y && apt install -y nginx openssl gettext-base
+RUN mkdir -p ${CRED_PATH}
+RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+-keyout ${CRED_PATH}/${CRED_KEY} \
+-out ${CRED_PATH}/${CRED_CERT} \
+-subj "/C=${COUNTRY}/ST=${STATE}/L=${LOCALITY}/O=${ORGANIZATION}/OU=${ORG_UNIT}/CN=${COMMON_NAME}"
+COPY conf/nginx.conf ./tmp/nginx.conf
+RUN envsubst '$CRED_PATH $CRED_KEY $CRED_CERT $COMMON_NAME' < /tmp/nginx.conf > /etc/nginx/sites-available/default
+ENTRYPOINT ["nginx", "-g", "daemon off;"]

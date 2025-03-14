@@ -1,21 +1,46 @@
+all: build run
 
-COMPOSE_FILE=./srcs/docker-compose.yml
+data:
+	@if [ ! -d "home/bfaisy/data/mariadb" ] && [ ! -d "home/bfaisy/wordpress;" ]; then \
+	mkdir -p home/bfaisy/data/mariadb && mkdir -p home/bfaisy/data/wordpress; fi
 
-all: run
+build: data
+	docker compose -f srcs/docker-compose.yml build
 
-run: 
-	@sudo mkdir -p /home/bfaisy/data/wordpress
-	@sudo mkdir -p /home/bfaisy/data/mysql
-	@docker-compose -f $(COMPOSE_FILE) up --build
+run:
+	docker compose -f srcs/docker-compose.yml up -d
 
-clean: 	
-	@docker-compose -f $(COMPOSE_FILE) down
-	@-docker stop `docker ps -qa`
-	@-docker rm `docker ps -qa`
-	@-docker rmi -f `docker images -qa`
-	@-docker volume rm `docker volume ls -q`
-	@-docker network rm `docker network ls -q`
-	@sudo rm -rf /home/bfaisy/data/wordpress
-	@sudo rm -rf /home/bfaisy/data/mysql
+exec:
+	$(eval service=$(filter-out $@,$(MAKECMDGOALS)))
+	docker compose -f srcs/docker-compose.yml exec $(service) bash
 
-.PHONY: run up debug list list_volumes clean
+status:
+	$(eval service=$(filter-out $@,$(MAKECMDGOALS)))
+	docker compose -f srcs/docker-compose.yml logs $(service)
+
+stop:
+	docker compose -f srcs/docker-compose.yml down
+
+iclean:
+	docker compose -f srcs/docker-compose.yml down --rmi all
+
+vclean:
+	docker compose -f srcs/docker-compose.yml down --rmi all -v
+	@sudo rm -rf home
+
+fclean: vclean
+	docker system prune -af
+
+dls:
+	docker ps -a
+
+vls:
+	docker volume ls
+
+ils:
+	docker image ls
+
+nls:
+	docker networks ls
+
+.SILENT:
